@@ -127,7 +127,13 @@ npm run test:watch
 npm run test:coverage
 
 # Test specific package
-npx nx run @project-kessel/react-kessel-access-check:test
+npx nx test react-kessel-access-check
+
+# Run only integration tests
+npx nx test react-kessel-access-check --testPathPattern=integration
+
+# Run specific test file
+npx nx test react-kessel-access-check --testPathPattern=critical-scenarios
 ```
 
 ### Linting
@@ -205,7 +211,54 @@ The `useSelfAccessCheck` hook uses TypeScript function overloads to provide diff
 - Test all three hook overloads separately
 - Test loading states, error states, and success states
 - Test edge cases (empty arrays, network errors, malformed responses)
-- Files: `hooks.test.tsx`, `api-client.test.ts`, `AccessCheckProvider.test.tsx`
+- Separate unit tests and integration tests into different directories
+- Files:
+  - Unit tests: `hooks.test.tsx`, `api-client.test.ts`, `AccessCheckProvider.test.tsx`
+  - Integration tests: `__tests__/integration/critical-scenarios.test.tsx`
+
+#### MSW Handler Library
+
+Integration tests use a comprehensive MSW handler library:
+- `api-mocks/handlers/success-handlers.ts` - Happy path scenarios
+- `api-mocks/handlers/error-handlers.ts` - Error scenarios (401, 403, 404, 500, etc.)
+- `api-mocks/test-utils.tsx` - Test utilities and factories
+
+**Using MSW handlers in tests:**
+```typescript
+import { server } from '../api-mocks/msw-server';
+import { errorHandlers } from '../api-mocks/handlers/error-handlers';
+
+// Override default handler for specific test
+test('should handle 401 error', async () => {
+  server.use(errorHandlers.unauthorized);
+  // ... test code
+});
+```
+
+#### Test Utilities
+
+Helper functions for writing tests:
+- `createTestWrapper(config?)` - Provider wrapper for renderHook
+- `createMockResource(overrides?)` - Factory for mock resources
+- `createMockResources(count)` - Generate multiple resources
+- `createMaliciousResource(type)` - Security testing payloads
+
+**Example test:**
+```typescript
+import { renderHook, waitFor } from '@testing-library/react';
+import { createTestWrapper, createMockResource } from '../api-mocks/test-utils';
+
+test('should check permission', async () => {
+  const resource = createMockResource({ id: 'ws-123' });
+  const { result } = renderHook(
+    () => useSelfAccessCheck({ relation: 'view', resource }),
+    { wrapper: createTestWrapper() }
+  );
+
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(result.current.data?.allowed).toBe(true);
+});
+```
 
 ### Code Organization
 
