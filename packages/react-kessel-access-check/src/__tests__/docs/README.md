@@ -1,8 +1,10 @@
-# Documentation
+# Test Documentation
 
-This directory contains project documentation, test plans, and analysis documents.
+This directory contains all documentation related to the integration test suite for `@project-kessel/react-kessel-access-check`.
 
-## Test Documentation
+**Location:** `packages/react-kessel-access-check/src/__tests__/docs/`
+
+## Contents
 
 ### Integration Testing
 - **[INTEGRATION_TEST_PLAN.md](./INTEGRATION_TEST_PLAN.md)** - Comprehensive test plan with 50+ scenarios across 4 phases
@@ -17,13 +19,16 @@ This directory contains project documentation, test plans, and analysis document
 - **[PR_DESCRIPTION.md](./PR_DESCRIPTION.md)** - Detailed PR description (internal reference)
 - **[PR_DESCRIPTION_GITHUB.md](./PR_DESCRIPTION_GITHUB.md)** - Concise PR description (GitHub-ready)
 
-## Root-Level Documentation
+## Related Files
 
-Some documentation files remain at the project root for discoverability:
+### Test Files
+- **[../integration/](../integration/)** - Integration test suite
+  - `critical-scenarios.test.tsx` - Critical scenario tests
 
-- **[../Claude.md](../Claude.md)** - Project guide for AI assistants
-- **[../README.md](../README.md)** - Main project documentation (in package directories)
-- **[../CHANGELOG.md](../CHANGELOG.md)** - Version history (auto-generated)
+### Project Documentation
+- **[../../../../../../Claude.md](../../../../../../Claude.md)** - Project guide for AI assistants (root)
+- **[../../../README.md](../../../README.md)** - Package README
+- **[../../../CHANGELOG.md](../../../CHANGELOG.md)** - Version history (auto-generated)
 
 ## Organization
 
