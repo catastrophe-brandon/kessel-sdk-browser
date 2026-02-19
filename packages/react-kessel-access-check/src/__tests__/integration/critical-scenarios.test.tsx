@@ -320,6 +320,132 @@ describe('Integration Tests - Critical Scenarios', () => {
     });
   });
 
+  describe('4a. 403 Forbidden Handling', () => {
+    /**
+     * Test: 403 Forbidden should return clear error
+     * Priority: CRITICAL
+     *
+     * Scenario: User authenticated but lacks API-level permission
+     * Expected: Clear forbidden error message
+     * Coverage: Permission error flow, 403 vs 401 vs allowed=false distinction
+     *
+     * Note: 403 differs from allowed=false:
+     * - 403: User lacks permission to use the API itself
+     * - allowed=false: User can use API but specific resource check denied
+     */
+    it('should handle 403 Forbidden with clear error message', async () => {
+      server.use(errorHandlers.forbidden);
+
+      const resource = createMockResource();
+      const { result } = renderHook(
+        () => useSelfAccessCheck({ relation: 'view', resource }),
+        { wrapper: createTestWrapper() }
+      );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.error).toBeDefined();
+      expect(result.current.error?.code).toBe(403);
+      expect(result.current.error?.message).toContain('Forbidden');
+      expect(result.current.error?.message).toContain('Insufficient permissions');
+      expect(result.current.data).toBeUndefined();
+    });
+
+    /**
+     * Test: 403 on bulk check endpoint
+     */
+    it('should handle 403 on bulk check', async () => {
+      server.use(errorHandlers.forbiddenBulk);
+
+      const resources = [
+        createMockResource({ id: 'resource-1' }),
+        createMockResource({ id: 'resource-2' })
+      ];
+
+      const { result } = renderHook(
+        () => useSelfAccessCheck({ relation: 'view', resources: resources as any }),
+        { wrapper: createTestWrapper() }
+      );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.error).toBeDefined();
+      expect(result.current.error?.code).toBe(403);
+      expect(result.current.data).toBeUndefined();
+    });
+
+    /**
+     * Test: Distinguish 403 from allowed=false
+     *
+     * Important distinction:
+     * - HTTP 403: API-level permission failure (can't use the API)
+     * - allowed=false: Resource-level check failure (can use API, but check denied)
+     */
+    it('should distinguish 403 forbidden from allowed=false', async () => {
+      // First: Test 403 error (API-level denial)
+      server.use(errorHandlers.forbidden);
+
+      const resource = createMockResource();
+      const { result: forbiddenResult } = renderHook(
+        () => useSelfAccessCheck({ relation: 'view', resource }),
+        { wrapper: createTestWrapper() }
+      );
+
+      await waitFor(() => expect(forbiddenResult.current.loading).toBe(false));
+
+      // 403 returns error, no data
+      expect(forbiddenResult.current.error).toBeDefined();
+      expect(forbiddenResult.current.error?.code).toBe(403);
+      expect(forbiddenResult.current.data).toBeUndefined();
+
+      // Second: Test allowed=false (successful API call, but permission denied)
+      server.resetHandlers();
+      server.use(
+        http.post('/api/kessel/v1beta2/checkself', () => {
+          return HttpResponse.json({
+            allowed: 'ALLOWED_FALSE',
+            consistencyToken: { token: 'mock-token' }
+          });
+        })
+      );
+
+      const { result: deniedResult } = renderHook(
+        () => useSelfAccessCheck({ relation: 'admin', resource }),
+        { wrapper: createTestWrapper() }
+      );
+
+      await waitFor(() => expect(deniedResult.current.loading).toBe(false));
+
+      // allowed=false returns data with allowed: false, no error
+      expect(deniedResult.current.error).toBeUndefined();
+      expect(deniedResult.current.data).toBeDefined();
+      expect(deniedResult.current.data?.allowed).toBe(false);
+    });
+
+    /**
+     * Test: 403 error object structure matches other HTTP errors
+     */
+    it('should return consistent error structure for 403', async () => {
+      server.use(errorHandlers.forbidden);
+
+      const resource = createMockResource();
+      const { result } = renderHook(
+        () => useSelfAccessCheck({ relation: 'view', resource }),
+        { wrapper: createTestWrapper() }
+      );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const error = result.current.error;
+      expect(error).toHaveProperty('code');
+      expect(error).toHaveProperty('message');
+      expect(error).toHaveProperty('details');
+      expect(typeof error?.code).toBe('number');
+      expect(typeof error?.message).toBe('string');
+      expect(Array.isArray(error?.details)).toBe(true);
+    });
+  });
+
   describe('5. Invalid JSON Response Handling', () => {
     /**
      * Test: HTML error page should be handled gracefully

@@ -77,6 +77,20 @@ export const errorHandlers = {
   }),
 
   /**
+   * 403 Forbidden - For bulk endpoint
+   */
+  forbiddenBulk: http.post('/api/kessel/v1beta2/checkselfbulk', () => {
+    return HttpResponse.json(
+      {
+        code: 403,
+        message: 'Forbidden: Insufficient permissions',
+        details: []
+      },
+      { status: 403 }
+    );
+  }),
+
+  /**
    * 404 Not Found - Resource doesn't exist
    */
   notFound: http.post('/api/kessel/v1beta2/checkself', () => {
